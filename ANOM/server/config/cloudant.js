@@ -19,7 +19,8 @@
 const { CloudantV1 } = require('@ibm-cloud/cloudant');
 const { IamAuthenticator } = require('ibm-cloud-sdk-core');
 
-const DB_NAME = process.env.CLOUDANT_DB || 'anom_users';
+const DB_NAME       = process.env.CLOUDANT_DB        || 'anom_users';
+const INTERESTS_DB  = process.env.CLOUDANT_INTERESTS_DB || 'anom_interests';
 
 // ─── Build the client (lazy — no network call yet) ────────────────────────────
 
@@ -92,6 +93,18 @@ async function initCloudant() {
 
   console.log(`✅ Database ready: ${DB_NAME}`);
 
+  // ── 2b. Ensure the interests database exists ──────────────────────────────
+  try {
+    await _client.getDatabaseInformation({ db: INTERESTS_DB });
+  } catch (err) {
+    if (err.status === 404) {
+      await _client.putDatabase({ db: INTERESTS_DB });
+      console.log(`✅ Database ready: ${INTERESTS_DB}`);
+    } else {
+      throw new Error(`❌ Error checking database "${INTERESTS_DB}": ${err.message}`);
+    }
+  }
+
   // ── 3. Ensure the email Mango index exists ────────────────────────────────
   // postIndex is idempotent: re-running with the same name is a no-op.
   try {
@@ -118,6 +131,20 @@ async function initCloudant() {
   } catch (err) {
     console.warn(`⚠️  Could not create userId index: ${err.message}`);
   }
+
+  // ── 5. Indexes on the interests database ─────────────────────────────────
+  const interestIndexes = [
+    { fields: [{ fromUserId: 'asc' }],              name: 'idx-interest-from'        },
+    { fields: [{ toUserId: 'asc' }],                name: 'idx-interest-to'          },
+    { fields: [{ fromUserId: 'asc' }, { toUserId: 'asc' }], name: 'idx-interest-pair' },
+  ];
+  for (const { fields, name } of interestIndexes) {
+    try {
+      await _client.postIndex({ db: INTERESTS_DB, index: { fields }, name, type: 'json' });
+    } catch (err) {
+      console.warn(`⚠️  Could not create interest index "${name}": ${err.message}`);
+    }
+  }
 }
 
 // Named export so controllers can do:  const { cloudant } = require('../config/cloudant')
@@ -130,4 +157,4 @@ const cloudant = new Proxy(
   }
 );
 
-module.exports = { cloudant, initCloudant, DB_NAME };
+module.exports = { cloudant, initCloudant, DB_NAME, INTERESTS_DB };

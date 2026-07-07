@@ -12,11 +12,12 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import LoginPage     from './pages/LoginPage';
-import SignupPage    from './pages/SignupPage';
+import LoginPage    from './pages/LoginPage';
+import SignupPage   from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
-import ProfilePage   from './pages/ProfilePage';
-import DiscoverPage  from './pages/DiscoverPage';
+import ProfilePage  from './pages/ProfilePage';
+import DiscoverPage from './pages/DiscoverPage';
+import MatchesPage  from './pages/MatchesPage';
 
 /** Renders children only if a JWT token exists, else redirects to /login. */
 function ProtectedRoute({ children }) {
@@ -52,6 +53,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <DiscoverPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/matches"
+          element={
+            <ProtectedRoute>
+              <MatchesPage />
             </ProtectedRoute>
           }
         />

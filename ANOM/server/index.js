@@ -6,9 +6,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-const authRoutes    = require('./routes/auth');
-const profileRoutes = require('./routes/profile');
-const usersRoutes   = require('./routes/users');
+const authRoutes     = require('./routes/auth');
+const profileRoutes  = require('./routes/profile');
+const usersRoutes    = require('./routes/users');
+const interestRoutes = require('./routes/interests');
 const { initCloudant } = require('./config/cloudant');
 
 const app = express();
@@ -25,9 +26,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-app.use('/api/auth',    authRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/users',   usersRoutes);
+app.use('/api/auth',      authRoutes);
+app.use('/api/profile',   profileRoutes);
+app.use('/api/users',     usersRoutes);
+app.use('/api/interests', interestRoutes);
 
 // Health-check (useful for container probes)
 app.get('/api/health', (_req, res) => {

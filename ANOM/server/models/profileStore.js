@@ -88,7 +88,8 @@ async function upsertProfile(userId, data) {
 
 /**
  * Fetch all profiles except the one belonging to excludeUserId.
- * Returns an array of sanitised profile objects.
+ * Returns an array of public-safe profile objects for the discovery feed.
+ * Field `photoUrl` is remapped to `profilePhotoUrl`; email is never returned.
  * Uses Cloudant postFind (Mango) — results are capped at 200.
  */
 async function getAllProfiles(excludeUserId) {
@@ -99,21 +100,38 @@ async function getAllProfiles(excludeUserId) {
       userId: { '$ne': excludeUserId },
     },
     fields: [
-      '_id', 'userId', 'name', 'email', 'city',
-      'bio', 'profession', 'maritalStatus', 'interests', 'photoUrl', 'updatedAt',
+      'userId', 'name', 'city', 'bio',
+      'profession', 'interests', 'photoUrl',
     ],
     limit: 200,
   });
 
-  return (result.result.docs ?? []).map(_sanitize);
+  return (result.result.docs ?? []).map(_sanitizePublic);
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
+/** Strip Cloudant internals from a full profile document. */
 function _sanitize(doc) {
   // eslint-disable-next-line no-unused-vars
   const { _id, _rev, type, ...safe } = doc;
   return safe;
+}
+
+/**
+ * Public-safe projection for the discovery feed.
+ * Remaps photoUrl → profilePhotoUrl; never exposes email or maritalStatus.
+ */
+function _sanitizePublic(doc) {
+  return {
+    id:             doc.userId       ?? '',
+    name:           doc.name         ?? '',
+    city:           doc.city         ?? '',
+    bio:            doc.bio          ?? '',
+    profession:     doc.profession   ?? '',
+    interests:      Array.isArray(doc.interests) ? doc.interests : [],
+    profilePhotoUrl: doc.photoUrl    ?? '',
+  };
 }
 
 module.exports = { getProfile, upsertProfile, getAllProfiles };
