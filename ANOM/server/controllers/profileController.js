@@ -67,21 +67,37 @@ async function getProfileHandler(req, res) {
  * Validates, then creates or replaces the user's profile document.
  */
 async function updateProfileHandler(req, res) {
-  const userId = req.user.id;
+  try {
+    const userId = req.user.id;
 
-  const { error, value } = profileSchema.validate(req.body, { abortEarly: false });
-  if (error) {
-    const messages = error.details.map((d) => d.message);
-    return res.status(422).json({ success: false, errors: messages });
+    const { error, value } = profileSchema.validate(req.body, {
+      abortEarly: false,
+    });
+
+    if (error) {
+      const messages = error.details.map((d) => d.message);
+      return res.status(422).json({
+        success: false,
+        errors: messages,
+      });
+    }
+
+    const profile = await upsertProfile(userId, value);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      profile,
+    });
+  } catch (err) {
+    console.error("PROFILE UPDATE ERROR:");
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
-
-  const profile = await upsertProfile(userId, value);
-
-  return res.status(200).json({
-    success: true,
-    message: 'Profile updated successfully.',
-    profile,
-  });
 }
 
 module.exports = { getProfileHandler, updateProfileHandler };
