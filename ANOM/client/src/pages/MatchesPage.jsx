@@ -1,150 +1,141 @@
 /**
  * src/pages/MatchesPage.jsx
  *
- * Displays all mutual matches fetched from GET /api/interests/matches.
- * Each match shows the partner's profile photo, name, city, and profession.
+ * Displays all mutual matches from GET /api/interests/matches
+ * in a responsive grid of MatchCard components.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { getMatches } from '../api/interests';
 import AppShell from '../components/layout/AppShell';
-import ProfileAvatar from '../components/profile/ProfileAvatar';
+import MatchCard from '../components/matches/MatchCard';
+import MatchSkeleton from '../components/matches/MatchSkeleton';
+import { useAuth } from '../context/auth';
 
-// ── Skeleton card ─────────────────────────────────────────────────────────────
-function SkeletonMatch() {
+function EmptyState() {
   return (
-    <div className="bg-white rounded-2xl ring-1 ring-gray-100 p-5 flex items-center gap-4 animate-pulse">
-      <div className="h-14 w-14 rounded-full bg-gray-100 shrink-0" />
-      <div className="flex-1 space-y-2">
-        <div className="h-3 bg-gray-100 rounded w-1/2" />
-        <div className="h-2.5 bg-gray-100 rounded w-1/3" />
+    <div className="flex flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-6 py-20 text-center ring-1 ring-indigo-100">
+      <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-indigo-100">
+        <svg className="h-12 w-12 text-indigo-300" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+          <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+        </svg>
       </div>
-      <div className="h-8 w-24 rounded-lg bg-gray-100" />
-    </div>
-  );
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-function NoMatches() {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 text-center px-4">
-      <svg className="h-20 w-20 text-indigo-100 mb-5" viewBox="0 0 80 80"
-        fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="40" cy="40" r="40" fill="currentColor" />
-        {/* Two hearts */}
-        <path d="M28 36c0-4 3-7 7-7s7 3 7 7c0 5-7 11-7 11s-7-6-7-11z"
-          fill="#a5b4fc" />
-        <path d="M38 36c0-4 3-7 7-7s7 3 7 7c0 5-7 11-7 11s-7-6-7-11z"
-          fill="#c4b5fd" opacity="0.7" />
-      </svg>
-      <h3 className="text-base font-semibold text-gray-700">No matches yet</h3>
-      <p className="mt-1 text-sm text-gray-400 max-w-xs">
-        When someone you've shown interest in shows interest back, they'll appear here.
+      <h3 className="text-2xl font-bold text-slate-900">No matches yet</h3>
+      <p className="mt-3 max-w-md text-slate-600">
+        Discover more people to create new matches.
       </p>
+      <Link
+        to="/discover"
+        className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 hover:shadow-lg"
+      >
+        Discover People
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      </Link>
     </div>
   );
 }
 
-// ── Match card ────────────────────────────────────────────────────────────────
-function MatchCard({ match }) {
-  const { profile, matchedAt } = match;
-  const { name = '', city = '', profession = '', profilePhotoUrl = '' } = profile;
-
-  const matchDate = matchedAt
-    ? new Date(matchedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    : null;
-
+function ErrorState({ message, onRetry }) {
   return (
-    <div className="bg-white rounded-2xl ring-1 ring-gray-100 shadow-sm
-      hover:shadow-md transition-shadow duration-200 flex items-center gap-4 p-5">
-
-      {/* Avatar */}
-      <ProfileAvatar name={name} photoUrl={profilePhotoUrl} size="md" />
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-gray-900 truncate">{name || 'Unknown'}</p>
-        {profession && (
-          <p className="text-xs font-medium text-indigo-600 truncate mt-0.5">{profession}</p>
-        )}
-        {city && (
-          <p className="text-xs text-gray-400 truncate mt-0.5 flex items-center gap-1">
-            <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round"
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {city}
-          </p>
-        )}
-        {matchDate && (
-          <p className="text-xs text-gray-300 mt-1">Matched {matchDate}</p>
-        )}
+    <div className="rounded-3xl bg-red-50 px-6 py-8 text-center ring-1 ring-red-200">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+        <svg className="h-7 w-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
       </div>
-
-      {/* Mutual badge */}
-      <span className="shrink-0 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-600 ring-1 ring-green-100">
-        ♥ Mutual
-      </span>
+      <h3 className="text-lg font-semibold text-red-900">Couldn&apos;t load matches</h3>
+      <p className="mt-2 text-sm text-red-700">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-5 rounded-2xl bg-white px-5 py-2.5 text-sm font-semibold text-red-700 ring-1 ring-red-200 transition hover:bg-red-100"
+      >
+        Retry
+      </button>
     </div>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 export default function MatchesPage() {
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
+  const [error, setError] = useState('');
+
+  const currentUserId = currentUser?.id;
+
+  const loadMatches = useCallback(async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await getMatches();
+      if (res?.success) {
+        setMatches(res.matches || []);
+      } else {
+        setError(res?.message || 'Failed to load matches');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Unable to load matches');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    getMatches()
-      .then((data) => setMatches(data.matches ?? []))
-      .catch(() => setError('Could not load matches. Please try again.'))
-      .finally(() => setLoading(false));
-  }, []);
+    loadMatches();
+  }, [loadMatches]);
+
+  const handleMessage = (profileId) => {
+    navigate(`/chat/${profileId}`);
+  };
 
   return (
     <AppShell>
-      <div className="max-w-2xl mx-auto">
-
-        {/* ── Header ── */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Your Matches</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8" role="main" aria-busy={loading}>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Your Matches</h1>
+          <p className="mt-2 text-slate-600">
             {loading
-              ? 'Loading…'
-              : `${matches.length} mutual match${matches.length !== 1 ? 'es' : ''}`}
+              ? 'Loading your connections…'
+              : error
+                ? 'Something went wrong'
+                : `${matches.length} ${matches.length === 1 ? 'match' : 'matches'} waiting for you`}
           </p>
         </div>
 
-        {/* ── Error ── */}
-        {error && (
-          <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 ring-1 ring-red-200">
-            {error}
-          </div>
-        )}
-
-        {/* ── Loading ── */}
         {loading && (
-          <div className="flex flex-col gap-3">
-            {Array.from({ length: 4 }).map((_, i) => <SkeletonMatch key={i} />)}
-          </div>
-        )}
-
-        {/* ── Empty ── */}
-        {!loading && !error && matches.length === 0 && <NoMatches />}
-
-        {/* ── Match list ── */}
-        {!loading && matches.length > 0 && (
-          <div className="flex flex-col gap-3">
-            {matches.map((m) => (
-              <MatchCard key={m.profile?.id ?? m.matchedAt} match={m} />
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <MatchSkeleton key={i} />
             ))}
           </div>
         )}
 
+        {!loading && error && (
+          <ErrorState message={error} onRetry={loadMatches} />
+        )}
+
+        {!loading && !error && matches.length === 0 && (
+          <EmptyState />
+        )}
+
+        {!loading && !error && matches.length > 0 && (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {matches.map((match) => (
+              <MatchCard
+                key={match.profile?.id ?? match.matchedAt}
+                match={match}
+                currentUserId={currentUserId}
+                onMessage={handleMessage}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </AppShell>
   );

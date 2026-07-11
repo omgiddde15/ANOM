@@ -4,15 +4,7 @@
  * JWT is auto-attached from localStorage.
  */
 
-import axios from 'axios';
-
-const api = axios.create({ baseURL: '/api' });
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('anom_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import api from './client';
 
 /** POST /api/interests/send — { toUserId } */
 export async function sendInterest(toUserId) {

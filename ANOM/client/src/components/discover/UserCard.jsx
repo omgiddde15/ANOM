@@ -10,13 +10,23 @@
  *   onSendInterest(userId) → Promise  — called when Send Interest is clicked
  *   interestSent    — boolean, controls button state
  */
-
+import { useNavigate } from "react-router-dom";
 import { useState } from 'react';
+import { useAuth } from '../../context/auth';
 import ProfileAvatar from '../profile/ProfileAvatar';
+import api from '../../api/client';
 
 const MAX_BIO = 90;
 
-export default function UserCard({ user, onSendInterest, interestSent = false }) {
+export default function UserCard({ 
+  user, 
+  onSendInterest, 
+  onWithdraw,
+  status = null, 
+  processing = false,
+  isSentByUs = false,
+}) {
+  const navigate = useNavigate();
   const {
     id,
     name            = '',
@@ -27,18 +37,180 @@ export default function UserCard({ user, onSendInterest, interestSent = false })
     interests       = [],
   } = user;
 
-  const [sending, setSending] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const isMatched = status === 'matched';
+  const isPending = status === 'pending';
 
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiResponse, setAiResponse] = useState(null);
+  const { user: currentUser } = useAuth();
+
+  const currentUserId = currentUser?.id || currentUser?.userId || currentUser?._id || '';
+
+  const aiActions = [
+    { key: 'compatibilityExplanation', label: '✨ Why this match?', endpoint: `/ai/compatibility/${encodeURIComponent(id)}` },
+    { key: 'compatibility', label: '❤️ Compatibility', endpoint: '/ai/compatibility' },
+    { key: 'matchExplanation', label: '🧠 Match Explanation', endpoint: '/ai/match-explanation' },
+    { key: 'firstMessage', label: '💬 First Message', endpoint: '/ai/first-message' },
+    { key: 'datePlanner', label: '📅 Date Planner', endpoint: '/ai/date-planner' },
+  ];
+
+  const buildPayload = () => {
+    return {
+      user1Id: currentUserId,
+      user2Id: id,
+    };
+  };
+
+  const handleAiAction = async (actionKey, endpoint, label) => {
+    if (!currentUserId) {
+      setAiError('Unable to determine your user ID. Please sign in again.');
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError('');
+    setAiResponse(null);
+
+    try {
+      const response = actionKey === 'compatibilityExplanation'
+        ? await api.get(endpoint)
+        : await api.post(endpoint, buildPayload());
+      setAiResponse({ actionKey, label, data: response.data });
+    } catch (err) {
+      setAiError(
+        err.response?.data?.message || err.message || 'Failed to fetch AI result. Try again.'
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const renderAiResult = () => {
+    if (!aiResponse) return null;
+
+    const { actionKey, data } = aiResponse;
+
+    if (actionKey === 'compatibility') {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="text-sm font-semibold text-slate-900">Score</p>
+            <p>{data.score ?? 'N/A'} / 100</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="text-sm font-semibold text-slate-900">Reasons</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {(data.reasons ?? []).map((reason, index) => (
+                <li key={index}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="text-sm font-semibold text-slate-900">Conversation Starter</p>
+            <p className="mt-2">{data.conversationStarter || 'N/A'}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="text-sm font-semibold text-slate-900">Meeting Suggestion</p>
+            <p className="mt-2">{data.meetingSuggestion || 'N/A'}</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (actionKey === 'compatibilityExplanation') {
+      return (
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 p-4 text-white">
+            <span className="text-3xl font-bold">{data.score ?? 0}%</span><span className="text-indigo-100">AI compatibility score</span>
+          </div>
+          <div className="rounded-2xl bg-indigo-50 p-4 ring-1 ring-indigo-100"><p className="font-semibold text-indigo-900">Why this match?</p><ul className="mt-2 space-y-1 text-indigo-800">{(data.explanation ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl bg-emerald-50 p-4"><p className="font-semibold text-emerald-900">Strengths</p><ul className="mt-2 space-y-1 text-emerald-800">{(data.strengths ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>
+            <div className="rounded-2xl bg-amber-50 p-4"><p className="font-semibold text-amber-900">Challenges</p><ul className="mt-2 space-y-1 text-amber-800">{(data.challenges ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>
+          </div>
+          <div className="rounded-2xl bg-purple-50 p-4"><p className="font-semibold text-purple-900">Relationship tips</p><ul className="mt-2 space-y-1 text-purple-800">{(data.relationshipTips ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>
+        </div>
+      );
+    }
+
+    if (actionKey === 'matchExplanation') {
+      return (
+        <div className="space-y-4 text-sm text-slate-700">
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm font-semibold text-slate-900">Compatibility Level</p>
+            <p className="mt-2">{data.compatibilityLevel || 'N/A'}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm font-semibold text-slate-900">Summary</p>
+            <p className="mt-2">{data.summary || 'N/A'}</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">Strengths</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {(data.strengths ?? []).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">Challenges</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {(data.possibleChallenges ?? []).map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-sm font-semibold text-slate-900">Tips</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {(data.tips ?? []).map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      );
+    }
+
+    if (actionKey === 'firstMessage') {
+      return (
+        <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+          <p className="text-sm font-semibold text-slate-900">First Message</p>
+          <p className="mt-2 whitespace-pre-wrap">{data.message || 'N/A'}</p>
+        </div>
+      );
+    }
+
+    if (actionKey === 'datePlanner') {
+      return (
+        <div className="space-y-4 text-sm text-slate-700">
+          {(data.dateIdeas ?? []).map((idea, index) => (
+            <div key={index} className="rounded-2xl bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">{idea.title || `Idea ${index + 1}`}</p>
+              {idea.locationType && (
+                <p className="mt-2 text-slate-500">Location: {idea.locationType}</p>
+              )}
+              <p className="mt-2">{idea.description || 'No description available.'}</p>
+            </div>
+          ))}
+          {!(data.dateIdeas?.length) && <p>No date ideas returned.</p>}
+        </div>
+      );
+    }
+
+    return <p className="text-sm text-slate-700">No AI response available.</p>;
+  };
+
+  // Inline expanded profile panel — provides a quick view without routing
   const bioPreview = bio.length > MAX_BIO ? bio.slice(0, MAX_BIO).trimEnd() + '…' : bio;
 
   async function handleSend() {
-    if (interestSent || sending) return;
-    setSending(true);
-    try {
-      await onSendInterest(id);
-    } finally {
-      setSending(false);
-    }
+    if (processing) return;
+    await onSendInterest(id);
   }
 
   return (
@@ -48,7 +220,7 @@ export default function UserCard({ user, onSendInterest, interestSent = false })
     >
       {/* ── Header: avatar + identity ── */}
       <div className="flex items-start gap-4 p-5 pb-3">
-        <ProfileAvatar name={name} photoUrl={profilePhotoUrl} size="md" />
+        <ProfileAvatar name={name} profile={user} size="md" />
         <div className="min-w-0 flex-1 pt-0.5">
           <h3 className="font-semibold text-gray-900 truncate leading-tight">
             {name || 'Anonymous'}
@@ -99,32 +271,138 @@ export default function UserCard({ user, onSendInterest, interestSent = false })
       )}
 
       {/* ── Action buttons ── */}
-      <div className="mt-auto border-t border-gray-100 grid grid-cols-2 divide-x divide-gray-100">
-        {/* View Profile — placeholder */}
-        <button type="button" disabled title="Coming soon"
-          className="py-3 text-xs font-medium text-gray-400 cursor-not-allowed hover:bg-gray-50 transition-colors">
-          View Profile
-        </button>
+      <div className="mt-auto border-t border-gray-100">
+        <div className="grid grid-cols-2 divide-x divide-gray-100">
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={isModalOpen}
+            className="py-3 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          >
+            AI Features
+          </button>
 
-        {/* Send / Interested button */}
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={interestSent || sending}
-          className={`py-3 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5
-            ${interestSent
-              ? 'text-green-600 bg-green-50 cursor-default'
-              : sending
-                ? 'text-indigo-400 bg-indigo-50 cursor-wait'
-                : 'text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100'
-            }`}
-        >
-          {sending && (
-            <span className="h-3 w-3 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+          {/* Conditional buttons based on status */}
+          {isMatched ? (
+            <button
+              type="button"
+              disabled
+              className="py-3 text-xs font-semibold text-green-600 bg-green-50 cursor-default"
+            >
+              💜 Matched
+            </button>
+          ) : isSentByUs ? (
+            <button
+              type="button"
+              onClick={() => onWithdraw(id)}
+              disabled={processing}
+              className="py-3 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+            >
+              Withdraw Interest
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={processing}
+              className={`py-3 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                processing
+                  ? 'text-indigo-400 bg-indigo-50 cursor-wait'
+                  : 'text-indigo-600 hover:bg-indigo-50 active:bg-indigo-100'
+              }`}
+            >
+              {processing && (
+                <span className="h-3 w-3 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+              )}
+              {processing ? 'Sending…' : 'Send Interest'}
+            </button>
           )}
-          {interestSent ? '♥ Interested' : sending ? 'Sending…' : 'Send Interest'}
-        </button>
+        </div>
       </div>
+
+      <div className="px-5 pb-4">
+        <div className="flex items-center gap-2 mt-3">
+<button
+    onClick={() => navigate(`/users/${id}`)}
+    className="py-3 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+>
+    View Profile
+</button>
+        </div>
+      </div>
+
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">AI Features</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Generate compatibility insights, match explanations, first messages, and date ideas.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                aria-label="Close AI features dialog"
+                className="rounded-full bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-6 px-6 py-5 sm:px-8">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {aiActions.map((action) => (
+                  <button
+                    key={action.key}
+                    type="button"
+                    onClick={() => handleAiAction(action.key, action.endpoint, action.label)}
+                    className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-semibold text-slate-900 transition hover:border-indigo-300 hover:bg-indigo-50"
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                {aiLoading ? (
+                  <div className="flex items-center gap-3 text-slate-600">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                    Loading AI response…
+                  </div>
+                ) : aiError ? (
+                  <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-200">
+                    {aiError}
+                  </div>
+                ) : aiResponse ? (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl bg-white p-4 shadow-sm">
+                      <p className="text-sm font-semibold text-slate-900">{aiResponse.label}</p>
+                    </div>
+                    {renderAiResult()}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    Choose an AI feature to see results for this user.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 }

@@ -6,9 +6,9 @@
  * The decoded user object is stored in localStorage as "anom_user".
  */
 
-import { createContext, useContext, useState } from 'react';
-
-const AuthContext = createContext(null);
+import { useState } from 'react';
+import { disconnectSocket } from '../lib/socket';
+import { AuthContext } from './auth';
 
 const TOKEN_KEY = 'anom_token';
 const USER_KEY  = 'anom_user';
@@ -34,6 +34,7 @@ export function AuthProvider({ children }) {
 
   /** Clears session from memory and localStorage. */
   function authLogout() {
+    disconnectSocket();
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setToken(null);
@@ -48,8 +49,3 @@ export function AuthProvider({ children }) {
 }
 
 /** Convenience hook — throws if used outside <AuthProvider>. */
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
-  return ctx;
-}

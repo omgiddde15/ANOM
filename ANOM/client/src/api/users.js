@@ -3,18 +3,18 @@
  * Axios wrapper for the user discovery endpoint.
  */
 
-import axios from 'axios';
-
-const api = axios.create({ baseURL: '/api' });
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('anom_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import api from './client';
 
 /** GET /api/users — returns all profiles except the current user's */
 export async function getUsers() {
   const res = await api.get('/users');
   return res.data; // { success, users: [...] }
+}
+export async function getUser(id) {
+  const res = await api.get(`/users/${encodeURIComponent(id)}`);
+  return res.data;
+}
+export async function getDashboardAnalytics() {
+  const res = await api.get('/users/analytics');
+  return res.data;
 }

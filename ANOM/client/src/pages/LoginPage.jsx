@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/auth';
 import AuthCard from '../components/AuthCard';
 import InputField from '../components/InputField';
 import Button from '../components/Button';

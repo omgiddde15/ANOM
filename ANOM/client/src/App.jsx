@@ -11,13 +11,20 @@
  */
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './context/auth';
 import LoginPage    from './pages/LoginPage';
 import SignupPage   from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage  from './pages/ProfilePage';
 import DiscoverPage from './pages/DiscoverPage';
 import MatchesPage  from './pages/MatchesPage';
+import UserProfilePage from "./pages/UserProfilePage";
+import ConversationCoachPage from './pages/ConversationCoachPage';
+import ChatPage from './pages/ChatPage';
+import MeetingSchedulerPage from './pages/MeetingSchedulerPage';
+import MessagesPage from './pages/MessagesPage';
+import NotificationsPage from './pages/NotificationsPage';
+import ToastViewport from './components/ToastViewport';
 
 /** Renders children only if a JWT token exists, else redirects to /login. */
 function ProtectedRoute({ children }) {
@@ -32,6 +39,14 @@ export default function App() {
         <Route path="/"         element={<Navigate to="/login" replace />} />
         <Route path="/login"    element={<LoginPage />} />
         <Route path="/signup"   element={<SignupPage />} />
+        <Route
+          path="/users/:id"
+          element={
+            <ProtectedRoute>
+              <UserProfilePage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={
@@ -64,9 +79,38 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/coach"
+          element={
+            <ProtectedRoute>
+              <ConversationCoachPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat/:partnerId"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/meetings" element={<ProtectedRoute><MeetingSchedulerPage /></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+        <Route path="/messages/:partnerId" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      <ToastViewport />
     </BrowserRouter>
   );
 }

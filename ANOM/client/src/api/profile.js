@@ -5,16 +5,32 @@
  * The JWT is read from localStorage and attached as a Bearer token.
  */
 
-import axios from 'axios';
+import api from './client';
 
-const api = axios.create({ baseURL: '/api' });
+const EDITABLE_PROFILE_FIELDS = [
+  'name',
+  'email',
+  'city',
+  'profession',
+  'bio',
+  'interests',
+  'maritalStatus',
+  'photoUrl',
+  'profileImageUrl',
+  'relationshipGoal',
+  'age',
+  'gender',
+  'location',
+];
 
-// Attach JWT to every request from this module.
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('anom_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+export function pickEditableProfileFields(profile = {}) {
+  return EDITABLE_PROFILE_FIELDS.reduce((payload, field) => {
+    if (profile[field] !== undefined && profile[field] !== null) {
+      payload[field] = profile[field];
+    }
+    return payload;
+  }, {});
+}
 
 /** GET /api/profile */
 export async function getProfile() {

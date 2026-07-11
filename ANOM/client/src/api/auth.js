@@ -6,9 +6,7 @@
  * so no hard-coded base URL leaks into the bundle.
  */
 
-import axios from 'axios';
-
-const api = axios.create({ baseURL: '/api' });
+import api from './client';
 
 /**
  * POST /api/auth/signup

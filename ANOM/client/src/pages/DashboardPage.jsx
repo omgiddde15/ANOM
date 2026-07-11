@@ -1,48 +1,22 @@
-/**
- * src/pages/DashboardPage.jsx
- * Main landing page after login — uses AppShell for consistent nav.
- */
-
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { ChartBarIcon, ChatBubbleLeftRightIcon, HeartIcon, MapPinIcon, SparklesIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import AppShell from '../components/layout/AppShell';
 import ProfileAvatar from '../components/profile/ProfileAvatar';
+import { getDashboardAnalytics } from '../api/users';
+import { useAuth } from '../context/auth';
+
+const icons = [UserGroupIcon, HeartIcon, SparklesIcon, ChatBubbleLeftRightIcon, MapPinIcon, ChartBarIcon, SparklesIcon];
+function Skeleton({ className = '' }) { return <div className={`animate-pulse rounded-3xl bg-slate-200/70 ${className}`} />; }
+function Empty({ children }) { return <div className="flex min-h-36 items-center justify-center rounded-2xl border border-dashed border-slate-200 px-5 text-center text-sm text-slate-500">{children}</div>; }
+function timeAgo(iso) { const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); return minutes < 60 ? `${minutes || 1}m ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : `${Math.floor(minutes / 1440)}d ago`; }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-
-  return (
-    <AppShell>
-      <div className="max-w-2xl mx-auto">
-        {/* Welcome card */}
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-8 flex items-center gap-6">
-          <ProfileAvatar name={user?.name} photoUrl={user?.photoUrl} size="lg" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Welcome back{user?.name ? `, ${user.name}` : ''}!
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">{user?.email}</p>
-            <Link
-              to="/profile"
-              className="mt-3 inline-block text-sm font-medium text-indigo-600 hover:underline"
-            >
-              View &amp; edit your profile →
-            </Link>
-          </div>
-        </div>
-
-        {/* Placeholder panels */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {['Matches', 'Messages', 'Discover', 'Settings'].map((item) => (
-            <div
-              key={item}
-              className="rounded-xl bg-white ring-1 ring-gray-100 p-6 text-center shadow-sm"
-            >
-              <p className="text-sm font-medium text-gray-400 italic">{item} — coming soon</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </AppShell>
-  );
+  const { user } = useAuth(); const [data, setData] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const load = useCallback(async () => { setLoading(true); setError(''); try { setData(await getDashboardAnalytics()); } catch (err) { setError(err.response?.data?.message || 'Unable to load dashboard analytics.'); } finally { setLoading(false); } }, []);
+  useEffect(() => { load(); }, [load]);
+  const stats = data?.stats || {};
+  const cards = [['Total Users', stats.totalUsers, 'Community'], ['Total Matches', stats.totalMatches, 'Connections'], ['Interests Sent', stats.totalInterestsSent, 'All-time'], ['Total Messages', stats.totalMessages, 'Conversations'], ['Meetings Scheduled', stats.meetingsScheduled, 'Accepted'], ['Profile Completion', stats.profileCompletion ? `${stats.profileCompletion}%` : '0%', 'Your profile'], ['AI Compatibility Avg.', stats.aiCompatibilityAverage ? `${stats.aiCompatibilityAverage}%` : '—', 'Your matches']];
+  const maximum = Math.max(1, ...(data?.weekly || []).map((day) => day.count));
+  return <AppShell><div className="mx-auto max-w-7xl space-y-7"><header className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-indigo-950 to-violet-900 px-6 py-8 text-white shadow-xl sm:px-9"><div className="relative z-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-start"><div><p className="text-sm font-semibold text-indigo-200">ANOM AI · Your connection hub</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-indigo-100">See your community, connections, and next meaningful moments at a glance.</p></div><Link to="/discover" className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-indigo-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-white">Discover people</Link></div><div className="absolute -right-12 -top-20 h-64 w-64 rounded-full bg-fuchsia-400/20 blur-3xl" /></header>{error && <div role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-200">{error} <button onClick={load} className="font-bold underline">Retry</button></div>}<section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">{loading ? Array.from({ length: 7 }).map((_, index) => <Skeleton key={index} className="h-32" />) : cards.map(([label, value, note], index) => { const Icon = icons[index]; return <article key={label} className="group rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition duration-200 hover:-translate-y-1 hover:shadow-lg"><div className="flex items-start justify-between"><span className="rounded-xl bg-indigo-50 p-2 text-indigo-600"><Icon className="h-5 w-5" /></span><span className="text-[11px] font-medium text-slate-400">{note}</span></div><p className="mt-4 text-2xl font-bold tracking-tight text-slate-900">{value ?? 0}</p><p className="mt-1 text-xs font-medium text-slate-500">{label}</p></article>; })}</section><section className="grid gap-6 lg:grid-cols-[1.55fr,1fr]"><article className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6"><div className="flex items-center justify-between"><div><h2 className="font-bold text-slate-900">Weekly activity</h2><p className="mt-1 text-sm text-slate-500">Messages, interests, and meeting plans.</p></div><ChartBarIcon className="h-6 w-6 text-indigo-500" /></div>{loading ? <Skeleton className="mt-7 h-48" /> : data?.weekly?.some((day) => day.count) ? <div className="mt-7 flex h-48 items-end justify-between gap-2">{data.weekly.map((day) => <div key={day.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2"><span className="text-xs font-semibold text-slate-600">{day.count || ''}</span><div className="w-full max-w-10 rounded-t-xl bg-gradient-to-t from-indigo-600 to-violet-400 transition-all" style={{ height: `${Math.max(5, day.count / maximum * 100)}%` }} aria-label={`${day.label}: ${day.count} activities`} /><span className="text-xs text-slate-400">{day.label}</span></div>)}</div> : <div className="mt-6"><Empty>Start interacting to see your activity.</Empty></div>}</article><article className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6"><h2 className="font-bold text-slate-900">Upcoming meetings</h2><p className="mt-1 text-sm text-slate-500">Your accepted plans.</p>{loading ? <Skeleton className="mt-5 h-36" /> : data?.upcomingMeetings?.length ? <div className="mt-5 space-y-3">{data.upcomingMeetings.map((meeting) => <div key={`${meeting.date}-${meeting.time}`} className="rounded-2xl bg-indigo-50 p-3"><p className="text-sm font-semibold text-indigo-950">{meeting.date} · {meeting.time}</p><p className="mt-1 flex items-center gap-1 text-xs text-indigo-700"><MapPinIcon className="h-3.5 w-3.5" />{meeting.venue}</p></div>)}<Link to="/meetings" className="inline-block text-sm font-bold text-indigo-600 hover:underline">View all meetings →</Link></div> : <div className="mt-5"><Empty>No meetings scheduled.</Empty></div>}</article></section><section className="grid gap-6 lg:grid-cols-[1.55fr,1fr]"><article className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6"><h2 className="font-bold text-slate-900">Recent activity</h2>{loading ? <div className="mt-5 space-y-3">{[1,2,3].map((item) => <Skeleton key={item} className="h-14" />)}</div> : data?.activity?.length ? <ol className="mt-5 space-y-4">{data.activity.map((item, index) => <li key={`${item.createdAt}-${index}`} className="flex gap-3"><span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-indigo-500 ring-4 ring-indigo-50" /><div className="min-w-0"><p className="text-sm font-medium text-slate-700">{item.text}</p><p className="mt-1 text-xs text-slate-400">{timeAgo(item.createdAt)}</p></div></li>)}</ol> : <div className="mt-5"><Empty>Start interacting to see your activity.</Empty></div>}</article><article className="overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 to-indigo-700 p-5 text-white shadow-lg sm:p-6"><p className="text-sm font-semibold text-violet-100">Recommended match</p>{loading ? <Skeleton className="mt-5 h-40 bg-white/20" /> : data?.recommended ? <><div className="mt-5 flex items-center gap-4"><ProfileAvatar name={data.recommended.name} profile={data.recommended} size="lg" /><div><p className="text-lg font-bold">{data.recommended.name}</p><p className="text-sm text-violet-100">{data.recommended.profession || data.recommended.city || 'New connection'}</p><p className="mt-1 text-xs font-semibold text-violet-200">{data.recommended.compatibility}% compatibility</p></div></div><Link to="/discover" className="mt-6 inline-flex rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-indigo-700 transition hover:bg-violet-50">View in Discover</Link></> : <div className="mt-5 rounded-2xl bg-white/10 p-4 text-sm text-violet-100">Complete your profile and browse Discover to unlock recommendations.</div>}</article></section></div></AppShell>;
 }

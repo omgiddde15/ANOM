@@ -1,10 +1,23 @@
 /**
  * src/components/profile/ProfileAvatar.jsx
  *
- * Displays a photo if photoUrl is set, otherwise shows initials.
+ * Displays profileImageUrl (or legacy photo fields) when set;
+ * otherwise shows initials.
  */
 
-export default function ProfileAvatar({ name = '', photoUrl = '', size = 'lg' }) {
+import { useState } from 'react';
+import { resolveProfileImageUrl } from '../../lib/profileImage';
+
+export default function ProfileAvatar({
+  name = '',
+  photoUrl = '',
+  profileImageUrl = '',
+  profilePhotoUrl = '',
+  profile = null,
+  size = 'lg',
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+
   const initials = name
     .split(' ')
     .map((w) => w[0])
@@ -17,13 +30,17 @@ export default function ProfileAvatar({ name = '', photoUrl = '', size = 'lg' })
     size === 'md' ? 'h-14 w-14 text-lg'  :
                     'h-10 w-10 text-sm';
 
-  if (photoUrl) {
+  const imageUrl = profile
+    ? resolveProfileImageUrl(profile)
+    : resolveProfileImageUrl({ photoUrl, profileImageUrl, profilePhotoUrl });
+
+  if (imageUrl && !imageFailed) {
     return (
       <img
-        src={photoUrl}
+        src={imageUrl}
         alt={name}
         className={`${dim} rounded-full object-cover ring-2 ring-indigo-100`}
-        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        onError={() => setImageFailed(true)}
       />
     );
   }

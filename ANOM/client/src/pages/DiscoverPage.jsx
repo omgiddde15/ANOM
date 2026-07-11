@@ -8,7 +8,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { getUsers } from '../api/users';
-import { sendInterest, getSentInterests } from '../api/interests';
+import { sendInterest, getSentInterests, getReceivedInterests, getMatches, removeInterest } from '../api/interests';
 import AppShell from '../components/layout/AppShell';
 import UserCard from '../components/discover/UserCard';
 
@@ -68,25 +68,45 @@ function EmptyState({ searching }) {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function DiscoverPage() {
-  const [users,   setUsers]   = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
-  const [query,   setQuery]   = useState('');
-  // Set of toUserIds already sent by the current user (seeded from server)
-  const [sentSet, setSentSet] = useState(new Set());
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [sentMap, setSentMap] = useState(new Map()); // userId -> status
+  const [matchedSet, setMatchedSet] = useState(new Set());
+  const [processingId, setProcessingId] = useState(null);
 
-  // ── Fetch users + already-sent interests on mount ────────────────────────
+  // ── Loader: fetch users + sent/matches ───────────────────────────────
+  async function loadData() {
+    setLoading(true);
+    setError('');
+    try {
+      const [usersData, sentData, matchesData] = await Promise.all([
+        getUsers(),
+        getSentInterests(),
+        getMatches(),
+      ]);
+      setUsers(usersData.users ?? []);
+
+      // Build sentMap: { [userId]: status }
+      const newSentMap = new Map();
+      (sentData.interests ?? []).forEach(i => {
+        newSentMap.set(i.toUserId, i.status);
+      });
+      setSentMap(newSentMap);
+
+      // Build matchedSet: userIds we are matched with
+      const newMatchedSet = new Set((matchesData.matches ?? []).map(m => m.profile?.id || m.matchedUserId));
+      setMatchedSet(newMatchedSet);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not load members. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    Promise.all([getUsers(), getSentInterests()])
-      .then(([usersData, sentData]) => {
-        setUsers(usersData.users ?? []);
-        const alreadySent = new Set(
-          (sentData.interests ?? []).map((i) => i.toUserId)
-        );
-        setSentSet(alreadySent);
-      })
-      .catch(() => setError('Could not load members. Please try again.'))
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
 
   // ── Client-side filter ────────────────────────────────────────────────────
@@ -100,15 +120,44 @@ export default function DiscoverPage() {
     );
   }, [users, query]);
 
-  // ── Send Interest → real API ──────────────────────────────────────────────
+  // ── Handlers for interest actions ──────────────────────────────────────────────
   async function handleSendInterest(userId) {
-    await sendInterest(userId);
-    setSentSet((prev) => new Set([...prev, userId]));
+    if (processingId || sentMap.has(userId) || matchedSet.has(userId)) return;
+    setProcessingId(userId);
+    try {
+      const res = await sendInterest(userId);
+      const newSentMap = new Map(sentMap);
+      newSentMap.set(userId, res.interest.status);
+      setSentMap(newSentMap);
+      if (res.matched) {
+        setMatchedSet(prev => new Set([...prev, userId]));
+      }
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function handleWithdrawInterest(userId) {
+    if (processingId) return;
+    setProcessingId(userId);
+    try {
+      await removeInterest(userId);
+      const newSentMap = new Map(sentMap);
+      newSentMap.delete(userId);
+      setSentMap(newSentMap);
+      setMatchedSet(prev => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    } finally {
+      setProcessingId(null);
+    }
   }
 
   return (
     <AppShell>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto" role="main" aria-busy={loading}>
 
         {/* ── Page header ── */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -135,8 +184,11 @@ export default function DiscoverPage() {
         </div>
 
         {error && (
-          <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 ring-1 ring-red-200">
-            {error}
+          <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 ring-1 ring-red-200 flex items-center justify-between">
+            <div>{error}</div>
+            <div className="flex items-center gap-2">
+              <button onClick={loadData} className="rounded-md bg-white px-3 py-1 text-sm font-medium text-indigo-600 hover:bg-indigo-50">Retry</button>
+            </div>
           </div>
         )}
 
@@ -152,14 +204,27 @@ export default function DiscoverPage() {
 
         {!loading && filtered.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((user) => (
-              <UserCard
-                key={user.id}
-                user={user}
-                onSendInterest={handleSendInterest}
-                interestSent={sentSet.has(user.id)}
-              />
-            ))}
+            {filtered.map((user) => {
+              let status = null;
+              let isSentByUs = false;
+              if (matchedSet.has(user.id)) {
+                status = 'matched';
+              } else if (sentMap.has(user.id)) {
+                status = sentMap.get(user.id);
+                isSentByUs = true;
+              }
+              return (
+                <UserCard
+                  key={user.id}
+                  user={user}
+                  onSendInterest={handleSendInterest}
+                  onWithdraw={handleWithdrawInterest}
+                  status={status}
+                  processing={processingId === user.id}
+                  isSentByUs={isSentByUs}
+                />
+              );
+            })}
           </div>
         )}
 
