@@ -87,6 +87,26 @@ async function findById(id) {
   return _sanitize({ id: doc._id, ...doc });
 }
 
+/** Keep the canonical authentication identity in sync with profile edits. */
+async function updateUserIdentity(id, { name, email }) {
+  const response = await cloudant.getDocument({ db: DB_NAME, docId: id });
+  const existing = response.result;
+  const normalizedEmail = email.toLowerCase();
+
+  if (normalizedEmail !== existing.email) {
+    const emailOwner = await findByEmail(normalizedEmail);
+    if (emailOwner && emailOwner.id !== id) {
+      const error = new Error('Email already registered.');
+      error.status = 409;
+      throw error;
+    }
+  }
+
+  const document = { ...existing, name, email: normalizedEmail };
+  await cloudant.putDocument({ db: DB_NAME, docId: id, document });
+  return _sanitize({ id, ...document });
+}
+
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 /**
@@ -100,4 +120,4 @@ function _sanitize(doc) {
   return { id: doc._id ?? doc.id, ...safe };
 }
 
-module.exports = { createUser, findByEmail, findById };
+module.exports = { createUser, findByEmail, findById, updateUserIdentity };

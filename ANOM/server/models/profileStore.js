@@ -18,7 +18,8 @@
  *   profession   : string
  *   maritalStatus: string               ('single'|'married'|'divorced'|'widowed'|'prefer_not')
  *   interests    : string[]             (multi-select tags)
- *   photoUrl     : string               (URL to profile photo)
+ *   photoUrl         : string               (IBM Object Storage upload URL)
+ *   profileImageUrl  : string               (user-supplied image URL fallback)
  *   updatedAt    : string               (ISO-8601)
  * }
  */
@@ -78,7 +79,12 @@ async function upsertProfile(userId, data) {
     profession:    data.profession    ?? '',
     maritalStatus: data.maritalStatus ?? '',
     interests:     Array.isArray(data.interests) ? data.interests : [],
-    photoUrl:      data.photoUrl      ?? '',
+    photoUrl:         data.photoUrl         ?? '',
+    profileImageUrl:  data.profileImageUrl  ?? '',
+    relationshipGoal: data.relationshipGoal ?? '',
+    age:           data.age ?? null,
+    gender:        data.gender ?? '',
+    location:      data.location ?? '',
     updatedAt:     new Date().toISOString(),
   };
 
@@ -93,20 +99,25 @@ async function upsertProfile(userId, data) {
  * Uses Cloudant postFind (Mango) — results are capped at 200.
  */
 async function getAllProfiles(excludeUserId) {
-  const result = await cloudant.postFind({
-    db: DB_NAME,
-    selector: {
-      type: 'profile',
-      userId: { '$ne': excludeUserId },
-    },
-    fields: [
-      'userId', 'name', 'city', 'bio',
-      'profession', 'interests', 'photoUrl',
-    ],
-    limit: 200,
-  });
+  try {
+    const result = await cloudant.postFind({
+      db: DB_NAME,
+      selector: {
+        type: 'profile',
+        userId: { '$ne': excludeUserId },
+      },
+      fields: [
+        'userId', 'name', 'city', 'bio',
+        'profession', 'interests', 'photoUrl', 'profileImageUrl',
+      ],
+      limit: 200,
+    });
 
-  return (result.result.docs ?? []).map(_sanitizePublic);
+    return (result.result.docs ?? []).map(_sanitizePublic);
+  } catch (error) {
+    console.error('[Cloudant]', error.message);
+    return [];
+  }
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
@@ -130,7 +141,8 @@ function _sanitizePublic(doc) {
     bio:            doc.bio          ?? '',
     profession:     doc.profession   ?? '',
     interests:      Array.isArray(doc.interests) ? doc.interests : [],
-    profilePhotoUrl: doc.photoUrl    ?? '',
+    profilePhotoUrl: (doc.profileImageUrl || doc.photoUrl || '').trim(),
+    profileImageUrl: (doc.profileImageUrl || '').trim(),
   };
 }
 

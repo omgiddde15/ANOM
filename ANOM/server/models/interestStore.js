@@ -140,17 +140,55 @@ async function removeInterest(fromUserId, toUserId) {
 }
 
 /**
+ * Accept an interest from fromUserId (current user is toUserId).
+ * This will create our interest to them, which triggers auto-match!
+ */
+async function acceptInterest(toUserId, fromUserId) {
+  return sendInterest(toUserId, fromUserId);
+}
+
+/**
+ * Decline an interest from fromUserId (current user is toUserId).
+ * Deletes the incoming interest document.
+ */
+async function declineInterest(toUserId, fromUserId) {
+  const docId = interestDocId(fromUserId, toUserId);
+  
+  let existing;
+  try {
+    const res = await cloudant.getDocument({ db: INTERESTS_DB, docId });
+    existing = res.result;
+  } catch (err) {
+    if (err.status === 404) return false;
+    throw err;
+  }
+
+  await cloudant.deleteDocument({
+    db: INTERESTS_DB,
+    docId,
+    rev: existing._rev,
+  });
+
+  return true;
+}
+
+/**
  * All interests sent by `userId` (status: "pending" or "matched").
  * Returns array of { toUserId, status, createdAt, matchedAt }.
  */
 async function getSentInterests(userId) {
-  const res = await cloudant.postFind({
-    db:       INTERESTS_DB,
-    selector: { fromUserId: userId },
-    fields:   ['_id', 'fromUserId', 'toUserId', 'status', 'createdAt', 'matchedAt'],
-    limit:    500,
-  });
-  return (res.result.docs ?? []).map(_sanitize);
+  try {
+    const res = await cloudant.postFind({
+      db:       INTERESTS_DB,
+      selector: { fromUserId: userId },
+      fields:   ['_id', 'fromUserId', 'toUserId', 'status', 'createdAt', 'matchedAt'],
+      limit:    500,
+    });
+    return (res.result.docs ?? []).map(_sanitize);
+  } catch (error) {
+    console.error('[Cloudant]', error.message);
+    return [];
+  }
 }
 
 /**
@@ -158,13 +196,18 @@ async function getSentInterests(userId) {
  * Returns array of { fromUserId, status, createdAt, matchedAt }.
  */
 async function getReceivedInterests(userId) {
-  const res = await cloudant.postFind({
-    db:       INTERESTS_DB,
-    selector: { toUserId: userId },
-    fields:   ['_id', 'fromUserId', 'toUserId', 'status', 'createdAt', 'matchedAt'],
-    limit:    500,
-  });
-  return (res.result.docs ?? []).map(_sanitize);
+  try {
+    const res = await cloudant.postFind({
+      db:       INTERESTS_DB,
+      selector: { toUserId: userId },
+      fields:   ['_id', 'fromUserId', 'toUserId', 'status', 'createdAt', 'matchedAt'],
+      limit:    500,
+    });
+    return (res.result.docs ?? []).map(_sanitize);
+  } catch (error) {
+    console.error('[Cloudant]', error.message);
+    return [];
+  }
 }
 
 /**
@@ -174,16 +217,21 @@ async function getReceivedInterests(userId) {
  * then return the partner userIds.
  */
 async function getMatches(userId) {
-  const res = await cloudant.postFind({
-    db:       INTERESTS_DB,
-    selector: { fromUserId: userId, status: 'matched' },
-    fields:   ['toUserId', 'matchedAt'],
-    limit:    500,
-  });
-  return (res.result.docs ?? []).map((doc) => ({
-    matchedUserId: doc.toUserId,
-    matchedAt:     doc.matchedAt,
-  }));
+  try {
+    const res = await cloudant.postFind({
+      db:       INTERESTS_DB,
+      selector: { fromUserId: userId, status: 'matched' },
+      fields:   ['toUserId', 'matchedAt'],
+      limit:    500,
+    });
+    return (res.result.docs ?? []).map((doc) => ({
+      matchedUserId: doc.toUserId,
+      matchedAt:     doc.matchedAt,
+    }));
+  } catch (error) {
+    console.error('[Cloudant]', error.message);
+    return [];
+  }
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
@@ -194,4 +242,27 @@ function _sanitize(doc) {
   return safe;
 }
 
-module.exports = { sendInterest, removeInterest, getSentInterests, getReceivedInterests, getMatches };
+/**
+ * Returns true when `userId` has a matched interest toward `partnerId`.
+ */
+async function areUsersMatched(userId, partnerId) {
+  if (!userId || !partnerId || userId === partnerId) return false;
+
+  const docId = interestDocId(userId, partnerId);
+  try {
+    const res = await cloudant.getDocument({ db: INTERESTS_DB, docId });
+    return res.result.status === 'matched';
+  } catch (err) {
+    if (err.status === 404) return false;
+    throw err;
+  }
+}
+
+module.exports = {
+  sendInterest,
+  removeInterest,
+  getSentInterests,
+  getReceivedInterests,
+  getMatches,
+  areUsersMatched,
+};

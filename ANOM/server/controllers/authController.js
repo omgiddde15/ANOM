@@ -49,6 +49,9 @@ function signToken(payload) {
  *  6. Return { success, message, token, user: { id, name, email } }
  */
 async function signup(req, res) {
+  if (!process.env.JWT_SECRET) {
+    return res.status(503).json({ success: false, message: 'Authentication is not configured.' });
+  }
   // ── 1. Validate input ───────────────────────────────────────────────────────
   const { error, value } = signupSchema.validate(req.body, { abortEarly: false });
   if (error) {
@@ -95,6 +98,9 @@ async function signup(req, res) {
  *  5. Return { success, message, token, user: { id, name, email } }
  */
 async function login(req, res) {
+  if (!process.env.JWT_SECRET) {
+    return res.status(503).json({ success: false, message: 'Authentication is not configured.' });
+  }
   // ── 1. Validate input ───────────────────────────────────────────────────────
   const { error, value } = loginSchema.validate(req.body, { abortEarly: false });
   if (error) {

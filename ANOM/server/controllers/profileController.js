@@ -7,6 +7,7 @@
 
 const Joi = require('joi');
 const { getProfile, upsertProfile } = require('../models/profileStore');
+const { findById, updateUserIdentity } = require('../models/userStore');
 
 // ─── Validation schema ────────────────────────────────────────────────────────
 
@@ -19,14 +20,19 @@ const INTERESTS_LIST = [
 ];
 
 const profileSchema = Joi.object({
-  name:          Joi.string().min(2).max(80).required(),
-  email:         Joi.string().email().required(),
-  city:          Joi.string().max(100).allow('').default(''),
-  bio:           Joi.string().max(500).allow('').default(''),
-  profession:    Joi.string().max(100).allow('').default(''),
-  maritalStatus: Joi.string().valid(...MARITAL_STATUSES).default(''),
-  interests:     Joi.array().items(Joi.string().valid(...INTERESTS_LIST)).default([]),
-  photoUrl:      Joi.string().uri().allow('').default(''),
+  name:             Joi.string().min(2).max(80).required(),
+  email:            Joi.string().email().required(),
+  city:             Joi.string().max(100).allow('').default(''),
+  bio:              Joi.string().max(500).allow('').default(''),
+  profession:       Joi.string().max(100).allow('').default(''),
+  maritalStatus:    Joi.string().valid(...MARITAL_STATUSES).default(''),
+  interests:        Joi.array().items(Joi.string().valid(...INTERESTS_LIST)).default([]),
+  photoUrl:         Joi.string().uri().allow('').default(''),
+  profileImageUrl:  Joi.string().uri().allow('').default(''),
+  relationshipGoal: Joi.string().max(100).allow('').default(''),
+  age:              Joi.number().integer().min(18).max(120).allow(null, '').empty('').default(null),
+  gender:           Joi.string().max(50).allow('').default(''),
+  location:         Joi.string().max(200).allow('').default(''),
 });
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────
@@ -38,7 +44,7 @@ const profileSchema = Joi.object({
 async function getProfileHandler(req, res) {
   const userId = req.user.id;
 
-  const profile = await getProfile(userId);
+  const [profile, user] = await Promise.all([getProfile(userId), findById(userId)]);
 
   if (!profile) {
     // Return an empty skeleton so the frontend form is always populated.
@@ -46,14 +52,15 @@ async function getProfileHandler(req, res) {
       success: true,
       profile: {
         userId,
-        name:          req.user.name  ?? '',
-        email:         req.user.email ?? '',
+        name:          user?.name ?? '',
+        email:         user?.email ?? '',
         city:          '',
         bio:           '',
         profession:    '',
         maritalStatus: '',
         interests:     [],
         photoUrl:      '',
+        profileImageUrl: '',
         updatedAt:     null,
       },
     });
@@ -72,6 +79,7 @@ async function updateProfileHandler(req, res) {
 
     const { error, value } = profileSchema.validate(req.body, {
       abortEarly: false,
+      stripUnknown: true,
     });
 
     if (error) {
@@ -82,6 +90,7 @@ async function updateProfileHandler(req, res) {
       });
     }
 
+    await updateUserIdentity(userId, value);
     const profile = await upsertProfile(userId, value);
 
     return res.status(200).json({
@@ -93,7 +102,7 @@ async function updateProfileHandler(req, res) {
     console.error("PROFILE UPDATE ERROR:");
     console.error(err);
 
-    return res.status(500).json({
+    return res.status(err.status || 500).json({
       success: false,
       message: err.message,
     });

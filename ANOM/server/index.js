@@ -3,33 +3,41 @@
  */
 
 require('dotenv').config();
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
-const { cloudant, DB_NAME } = require("./config/cloudant");
-const authRoutes     = require('./routes/auth');
-const profileRoutes  = require('./routes/profile');
-const usersRoutes    = require('./routes/users');
-const interestRoutes = require('./routes/interests');
-const aiRoutes       = require('./routes/ai');
+const authRoutes       = require('./routes/auth');
+const profileRoutes    = require('./routes/profile');
+const usersRoutes      = require('./routes/users');
+const interestRoutes   = require('./routes/interests');
+const aiRoutes         = require('./routes/ai');
+const chatRoutes       = require('./routes/chat');
+const meetingRoutes    = require('./routes/meetings');
+const uploadRoutes     = require('./routes/upload');
+const notificationRoutes = require('./routes/notifications');
 const { initCloudant } = require('./config/cloudant');
+const { initSocket } = require('./socket');
+const { verifyToken } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ─── Global middleware ────────────────────────────────────────────────────────
 
+const clientOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map((origin) => origin.trim());
+app.disable('x-powered-by');
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  origin: clientOrigins,
   credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 const { WatsonXAI } = require("@ibm-cloud/watsonx-ai");
 const { IamAuthenticator } = require("ibm-cloud-sdk-core");
 
-app.get("/api/models", async (req, res) => {
+app.get("/api/models", verifyToken, async (_req, res) => {
   try {
     const client = new WatsonXAI({
       version: "2024-05-31",
@@ -43,15 +51,19 @@ app.get("/api/models", async (req, res) => {
 
     res.json(result.result);
   } catch (err) {
-    console.error(err);
-    res.status(500).json(err.message);
+    console.error('MODEL LIST ERROR:', err.message);
+    res.status(500).json({ success: false, message: 'Unable to load model specifications.' });
   }
 });
-app.use('/api/auth',      authRoutes);
-app.use('/api/profile',   profileRoutes);
-app.use('/api/users',     usersRoutes);
-app.use('/api/interests', interestRoutes);
-app.use('/api/ai',        aiRoutes);
+app.use('/api/auth',       authRoutes);
+app.use('/api/profile',    profileRoutes);
+app.use('/api/users',      usersRoutes);
+app.use('/api/interests',  interestRoutes);
+app.use('/api/ai',         aiRoutes);
+app.use('/api/chat',       chatRoutes);
+app.use('/api/meetings',   meetingRoutes);
+app.use('/api/upload',     uploadRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health-check (useful for container probes)
 app.get('/api/health', (_req, res) => {
@@ -74,7 +86,8 @@ app.use((_req, res) => {
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ success: false, message: 'Internal server error.' });
+  const status = err.type === 'entity.too.large' ? 413 : err.status || 500;
+  res.status(status).json({ success: false, message: status === 413 ? 'Request payload is too large.' : 'Internal server error.' });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
@@ -86,28 +99,11 @@ async function start() {
     console.error(err.message);
     process.exit(1);
   }
-app.get("/users", async (req, res) => {
-  try {
-    const result = await cloudant.postAllDocs({
-      db: DB_NAME,
-      includeDocs: true,
-    });
-
-    res.json(
-      result.result.rows.map((row) => row.doc)
-    );
-  } catch (err) {
-    console.error("USERS ERROR:", err);
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-      error: err,
-    });
-  }
-});
-  app.listen(PORT, () => {
+  const server = http.createServer(app);
+  initSocket(server);
+  server.listen(PORT, () => {
     console.log(`ANOM API listening on http://localhost:${PORT}`);
+    console.log('Socket.IO ready');
   });
 }
 
