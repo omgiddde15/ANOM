@@ -209,4 +209,4 @@ This project is developed for educational purposes under the IBM SkillsBuild Int
 
 ## GitHub Repository
 
-https://github.com/omgidde15/ANOM
+https://github.com/omgiddde15/ANOM
