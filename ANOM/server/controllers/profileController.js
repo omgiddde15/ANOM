@@ -13,11 +13,40 @@ const { findById, updateUserIdentity } = require('../models/userStore');
 
 const MARITAL_STATUSES = ['single', 'married', 'divorced', 'widowed', 'prefer_not', ''];
 
+// Exact list as per requirements
 const INTERESTS_LIST = [
-  'travel', 'music', 'sports', 'cooking', 'reading',
-  'gaming', 'art', 'technology', 'fitness', 'movies',
-  'photography', 'nature', 'fashion', 'volunteering', 'other',
+  "travel",
+  "music",
+  "sports",
+  "cooking",
+  "reading",
+  "gaming",
+  "art",
+  "technology",
+  "fitness",
+  "movies",
+  "photography",
+  "nature",
+  "fashion",
+  "volunteering",
+  "other"
 ];
+
+// Normalize interests: trim, lowercase, remove duplicates, filter invalid
+const normalizeInterests = (interests = []) => {
+  if (!Array.isArray(interests)) return [];
+  const normalized = new Set();
+  for (let interest of interests) {
+    const i = (interest || '').trim().toLowerCase();
+    if (!i) continue;
+    if (INTERESTS_LIST.includes(i)) {
+      normalized.add(i);
+    } else {
+      normalized.add('other');
+    }
+  }
+  return [...normalized];
+};
 
 const profileSchema = Joi.object({
   name:             Joi.string().min(2).max(80).required(),
@@ -26,7 +55,7 @@ const profileSchema = Joi.object({
   bio:              Joi.string().max(500).allow('').default(''),
   profession:       Joi.string().max(100).allow('').default(''),
   maritalStatus:    Joi.string().valid(...MARITAL_STATUSES).default(''),
-  interests:        Joi.array().items(Joi.string().valid(...INTERESTS_LIST)).default([]),
+  interests:        Joi.array().items(Joi.string().allow('')).default([]),
   photoUrl:         Joi.string().uri().allow('').default(''),
   profileImageUrl:  Joi.string().uri().allow('').default(''),
   relationshipGoal: Joi.string().max(100).allow('').default(''),
@@ -89,6 +118,9 @@ async function updateProfileHandler(req, res) {
         errors: messages,
       });
     }
+
+    // Normalize interests before saving
+    value.interests = normalizeInterests(value.interests);
 
     await updateUserIdentity(userId, value);
     const profile = await upsertProfile(userId, value);

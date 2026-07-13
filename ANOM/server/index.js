@@ -18,6 +18,8 @@ const notificationRoutes = require('./routes/notifications');
 const { initCloudant } = require('./config/cloudant');
 const { initSocket } = require('./socket');
 const { verifyToken } = require('./middleware/auth');
+const bcrypt = require('bcrypt');
+const { createUser, findByEmail } = require('./models/userStore');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -90,11 +92,33 @@ app.use((err, _req, res, _next) => {
   res.status(status).json({ success: false, message: status === 413 ? 'Request payload is too large.' : 'Internal server error.' });
 });
 
+// ─── Demo Users Initialization ────────────────────────────────────────────────
+
+async function initDemoUsers() {
+  const demoUsers = [
+    { name: "Om", email: "om@example.com", password: "demo1234" },
+    { name: "Priya", email: "priya@example.com", password: "demo1234" },
+  ];
+
+  for (const userData of demoUsers) {
+    const existing = await findByEmail(userData.email);
+    if (!existing) {
+      const hashedPassword = await bcrypt.hash(userData.password, 12);
+      await createUser({
+        ...userData,
+        password: hashedPassword,
+      });
+      console.log(`Created demo user: ${userData.email}`);
+    }
+  }
+}
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 async function start() {
   try {
     await initCloudant();
+    await initDemoUsers();
   } catch (err) {
     console.error(err.message);
     process.exit(1);

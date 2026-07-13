@@ -62,48 +62,98 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthCard title="Welcome back" subtitle="Sign in to your ANOM AI account">
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <>
+      <AuthCard title="Welcome back" subtitle="Sign in to your ANOM AI account">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
 
-        {/* API-level error banner */}
-        {apiError && (
-          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 ring-1 ring-red-200">
-            {apiError}
+          {/* API-level error banner */}
+          {apiError && (
+            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 ring-1 ring-red-200">
+              {apiError}
+            </div>
+          )}
+
+          <InputField
+            id="email"
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="alice@example.com"
+            autoComplete="email"
+            error={errors.email}
+          />
+          <InputField
+            id="password"
+            label="Password"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="Your password"
+            autoComplete="current-password"
+            error={errors.password}
+          />
+
+          <Button type="submit" loading={loading} className="mt-2 w-full">
+            {loading ? 'Signing in…' : 'Sign In'}
+          </Button>
+        </form>
+
+        <p className="mt-5 text-center text-sm text-gray-500">
+          Don&apos;t have an account?{' '}
+          <Link to="/signup" className="font-medium text-indigo-600 hover:underline">
+            Create one
+          </Link>
+        </p>
+      </AuthCard>
+
+      <div className="mt-8 w-full max-w-md mx-auto">
+        <div className="rounded-3xl bg-gradient-to-br from-indigo-50 to-purple-50 p-6 shadow-sm ring-1 ring-indigo-100">
+          <h3 className="text-lg font-semibold text-indigo-900 mb-4">Demo Instructions</h3>
+          <p className="text-sm text-indigo-800 mb-4">
+            You can test the complete application using two different accounts:
+          </p>
+          <div className="space-y-3 mb-5">
+            <div className="bg-white rounded-xl p-3 shadow-sm">
+              <p className="text-xs font-semibold text-indigo-900">Account A</p>
+              <p className="text-sm text-gray-700">
+                <span className="font-medium text-gray-900">Email:</span> om@example.com
+              </p>
+              <p className="text-sm text-gray-700">
+                <span className="font-medium text-gray-900">Password:</span> demo1234
+              </p>
+            </div>
+            <div className="bg-white rounded-xl p-3 shadow-sm">
+              <p className="text-xs font-semibold text-indigo-900">Account B</p>
+              <p className="text-sm text-gray-700">
+                <span className="font-medium text-gray-900">Email:</span> priya@example.com
+              </p>
+              <p className="text-sm text-gray-700">
+                <span className="font-medium text-gray-900">Password:</span> demo1234
+              </p>
+            </div>
           </div>
-        )}
 
-        <InputField
-          id="email"
-          label="Email"
-          type="email"
-          value={form.email}
-          onChange={handleChange}
-          placeholder="alice@example.com"
-          autoComplete="email"
-          error={errors.email}
-        />
-        <InputField
-          id="password"
-          label="Password"
-          type="password"
-          value={form.password}
-          onChange={handleChange}
-          placeholder="Your password"
-          autoComplete="current-password"
-          error={errors.password}
-        />
-
-        <Button type="submit" loading={loading} className="mt-2 w-full">
-          {loading ? 'Signing in…' : 'Sign In'}
-        </Button>
-      </form>
-
-      <p className="mt-5 text-center text-sm text-gray-500">
-        Don&apos;t have an account?{' '}
-        <Link to="/signup" className="font-medium text-indigo-600 hover:underline">
-          Create one
-        </Link>
-      </p>
-    </AuthCard>
+          <h4 className="text-sm font-semibold text-indigo-900 mb-3">How to test:</h4>
+          <ol className="list-decimal list-inside text-sm text-indigo-800 space-y-2">
+            <li>Login with Account A</li>
+            <li>Edit profile</li>
+            <li>Send Interest</li>
+            <li>Logout</li>
+            <li>Login with Account B</li>
+            <li>Send Interest back</li>
+            <li>Match is created automatically</li>
+            <li>Open Matches</li>
+            <li>Start AI Conversation</li>
+            <li>Schedule Meeting</li>
+            <li>Send Messages</li>
+            <li>Check Notifications</li>
+            <li>Logout</li>
+            <li>Login again with Account A</li>
+            <li>Verify Messages, Meetings and Notifications</li>
+          </ol>
+        </div>
+      </div>
+    </>
   );
 }

@@ -2,31 +2,9 @@ import { useEffect, useState } from 'react';
 import api from '../api/client';
 import { pickEditableProfileFields } from '../api/profile';
 import ProfileAvatar from '../components/profile/ProfileAvatar';
+import InterestSelector, { ALL_INTERESTS, normalizeInterests } from '../components/profile/InterestSelector';
 import { useAuth } from '../context/auth';
 import { toast } from '../lib/toast';
-
-const PREDEFINED_INTERESTS = [
-  'Travel',
-  'Music',
-  'Sports',
-  'Photography',
-  'Cooking',
-  'Movies',
-  'Reading',
-  'Gaming',
-  'Fitness',
-  'Technology',
-  'Nature',
-  'Dance',
-  'Art',
-  'Pets',
-  'Food',
-  'Entrepreneurship',
-  'AI',
-  'Football',
-  'Cricket',
-  'Hiking',
-];
 
 export default function ProfilePage() {
   const { user, authLogin } = useAuth();
@@ -48,7 +26,11 @@ export default function ProfilePage() {
     async function loadProfile() {
       try {
         const response = await api.get('/profile');
-        setProfile(response.data.profile || profile);
+        const loadedProfile = response.data.profile || profile;
+        setProfile({
+          ...loadedProfile,
+          interests: normalizeInterests(loadedProfile.interests)
+        });
       } catch (err) {
         setError(err.response?.data?.message || 'Unable to load profile. Please refresh and try again.');
       } finally {
@@ -67,17 +49,14 @@ export default function ProfilePage() {
 
   const toggleInterest = (interest) => {
     setProfile((current) => {
-      if (current.interests.includes(interest)) {
-        return {
-          ...current,
-          interests: current.interests.filter(i => i !== interest),
-        };
-      } else {
-        return {
-          ...current,
-          interests: [...current.interests, interest],
-        };
-      }
+      const lower = interest.toLowerCase();
+      const next = current.interests.includes(lower)
+        ? current.interests.filter(i => i !== lower)
+        : [...current.interests, lower];
+      return {
+        ...current,
+        interests: normalizeInterests(next),
+      };
     });
   };
 
@@ -88,7 +67,12 @@ export default function ProfilePage() {
     setSaving(true);
 
     try {
-      const response = await api.put('/profile', pickEditableProfileFields(profile));
+      // Normalize interests before sending
+      const payload = {
+        ...pickEditableProfileFields(profile),
+        interests: normalizeInterests(profile.interests)
+      };
+      const response = await api.put('/profile', payload);
       setProfile(response.data.profile || profile);
       if (response.data.profile && user?.id) {
         authLogin(localStorage.getItem('anom_token'), {
@@ -104,7 +88,7 @@ export default function ProfilePage() {
       setError(
         err.response?.data?.errors?.join(', ')
           || err.response?.data?.message
-          || 'Failed to update profile. Please try again.'
+          || (err.message === 'Network Error' ? 'Unable to connect to server. Please check your connection and try again.' : 'Failed to update profile. Please try again.')
       );
     } finally {
       setSaving(false);
@@ -243,20 +227,24 @@ export default function ProfilePage() {
                 <label className="block text-sm font-medium text-slate-700">
                   Interests & Hobbies
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {PREDEFINED_INTERESTS.map(interest => (
-                      <button
-                        key={interest}
-                        type="button"
-                        onClick={() => toggleInterest(interest)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                          profile.interests.includes(interest)
-                            ? 'bg-indigo-600 text-white shadow-md hover:bg-indigo-700'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                      >
-                        {interest}
-                      </button>
-                    ))}
+                    {ALL_INTERESTS.map(interest => {
+                      const lower = interest.toLowerCase();
+                      const active = profile.interests.includes(lower);
+                      return (
+                        <button
+                          key={lower}
+                          type="button"
+                          onClick={() => toggleInterest(interest)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                            active
+                              ? 'bg-indigo-600 text-white shadow-md hover:bg-indigo-700'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {interest}
+                        </button>
+                      );
+                    })}
                   </div>
                   <p className="mt-2 text-xs text-slate-500">
                     Select at least a few interests to help find better matches.

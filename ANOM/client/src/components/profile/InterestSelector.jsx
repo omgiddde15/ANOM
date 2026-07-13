@@ -5,11 +5,41 @@
  * Toggling a tag adds/removes it from the selected array.
  */
 
-const ALL_INTERESTS = [
-  'Travel', 'Music', 'Sports', 'Cooking', 'Reading',
-  'Gaming', 'Art', 'Technology', 'Fitness', 'Movies',
-  'Photography', 'Nature', 'Fashion', 'Volunteering', 'Other',
+// Exact list as per requirements
+export const PREDEFINED_INTERESTS = [
+  "travel",
+  "music",
+  "sports",
+  "cooking",
+  "reading",
+  "gaming",
+  "art",
+  "technology",
+  "fitness",
+  "movies",
+  "photography",
+  "nature",
+  "fashion",
+  "volunteering",
+  "other"
 ];
+
+// Capitalized version for display
+export const ALL_INTERESTS = PREDEFINED_INTERESTS.map(
+  (interest) => interest.charAt(0).toUpperCase() + interest.slice(1)
+);
+
+// Normalize interests: unique, lowercase, no empty
+export const normalizeInterests = (interests = []) => {
+  if (!Array.isArray(interests)) return [];
+  const normalized = new Set();
+  for (let interest of interests) {
+    const i = (interest || '').trim().toLowerCase();
+    if (!i) continue;
+    normalized.add(i);
+  }
+  return [...normalized];
+};
 
 export default function InterestSelector({ selected = [], onChange }) {
   function toggle(interest) {
@@ -17,7 +47,7 @@ export default function InterestSelector({ selected = [], onChange }) {
     const next = selected.includes(lower)
       ? selected.filter((i) => i !== lower)
       : [...selected, lower];
-    onChange(next);
+    onChange(normalizeInterests(next));
   }
 
   return (
