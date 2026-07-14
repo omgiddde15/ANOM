@@ -26,10 +26,17 @@ const PORT = process.env.PORT || 5000;
 
 // ─── Global middleware ────────────────────────────────────────────────────────
 
-const clientOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').split(',').map((origin) => origin.trim());
-app.disable('x-powered-by');
+const clientOrigins = (
+  process.env.CLIENT_ORIGIN || "http://localhost:5173"
+)
+.split(",")
+.map(origin => origin.trim());
+app.use((req, res, next) => {
+  console.log("Origin:", req.headers.origin);
+  next();
+});
 app.use(cors({
-  origin: clientOrigins,
+  origin: true,
   credentials: true,
 }));
 app.use(express.json({ limit: '1mb' }));
