@@ -49,3 +49,8 @@ export async function getDateIdeas(user1Id, user2Id) {
   const res = await api.post('/ai/date-planner', { user1Id, user2Id });
   return res.data;
 }
+
+export async function getMeetingSuggestion(matchId, city, interests = []) {
+  const res = await api.post('/ai/meeting-suggestion', { matchId, city, interests });
+  return res.data;
+}

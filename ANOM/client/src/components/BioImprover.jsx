@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import { improveBio } from '../api/ai';
 
 export default function BioImprover() {
   const [bio, setBio] = useState('');
@@ -20,12 +20,8 @@ export default function BioImprover() {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/ai/bio-improver', {
-        bio: bio.trim(),
-        interests: [],
-      });
-
-      setImprovedBio(response.data?.improvedBio || 'No improved bio returned.');
+      const response = await improveBio(bio.trim(), []);
+      setImprovedBio(response?.improvedBio || 'No improved bio returned.');
     } catch (err) {
       setError(
         err?.response?.data?.message || err.message || 'Unable to improve your bio. Please try again.'
