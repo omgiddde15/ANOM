@@ -94,26 +94,26 @@ export default function UserCard({
 
     if (actionKey === 'compatibility') {
       return (
-        <div className="space-y-4">
-          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-            <p className="text-sm font-semibold text-slate-900">Score</p>
-            <p>{data.score ?? 'N/A'} / 100</p>
+        <div className="space-y-3">
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="text-lg font-semibold text-slate-900 mb-2">Compatibility Score</p>
+            <p className="text-base text-slate-700">{data.score ?? 'N/A'} / 100</p>
           </div>
-          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-            <p className="text-sm font-semibold text-slate-900">Reasons</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="text-lg font-semibold text-slate-900 mb-2">Summary</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-base text-slate-700">
               {(data.reasons ?? []).map((reason, index) => (
                 <li key={index}>{reason}</li>
               ))}
             </ul>
           </div>
-          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-            <p className="text-sm font-semibold text-slate-900">Conversation Starter</p>
-            <p className="mt-2">{data.conversationStarter || 'N/A'}</p>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="text-lg font-semibold text-slate-900 mb-2">Conversation Starter</p>
+            <p className="mt-1 text-base text-slate-700">{data.conversationStarter || 'N/A'}</p>
           </div>
-          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-            <p className="text-sm font-semibold text-slate-900">Meeting Suggestion</p>
-            <p className="mt-2">{data.meetingSuggestion || 'N/A'}</p>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="text-lg font-semibold text-slate-900 mb-2">Meeting Suggestion</p>
+            <p className="mt-1 text-base text-slate-700">{data.meetingSuggestion || 'N/A'}</p>
           </div>
         </div>
       );
@@ -121,52 +121,93 @@ export default function UserCard({
 
     if (actionKey === 'compatibilityExplanation') {
       return (
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 p-4 text-white">
-            <span className="text-3xl font-bold">{data.score ?? 0}%</span><span className="text-indigo-100">AI compatibility score</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 p-4 text-white">
+            <span className="text-3xl font-bold">{data.score ?? 0}%</span>
+            <span className="text-indigo-100 text-base">AI compatibility score</span>
           </div>
-          <div className="rounded-2xl bg-indigo-50 p-4 ring-1 ring-indigo-100"><p className="font-semibold text-indigo-900">Why this match?</p><ul className="mt-2 space-y-1 text-indigo-800">{(data.explanation ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-emerald-50 p-4"><p className="font-semibold text-emerald-900">Strengths</p><ul className="mt-2 space-y-1 text-emerald-800">{(data.strengths ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>
-            <div className="rounded-2xl bg-amber-50 p-4"><p className="font-semibold text-amber-900">Challenges</p><ul className="mt-2 space-y-1 text-amber-800">{(data.challenges ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>
+          <div className="rounded-xl bg-indigo-50 p-4 ring-1 ring-indigo-100">
+            <p className="text-lg font-semibold text-indigo-900 mb-2">Why this match?</p>
+            <ul className="mt-1 space-y-1 text-base text-indigo-800">
+              {(data.explanation ?? []).map((item, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span>•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="rounded-2xl bg-purple-50 p-4"><p className="font-semibold text-purple-900">Relationship tips</p><ul className="mt-2 space-y-1 text-purple-800">{(data.relationshipTips ?? []).map((item, index) => <li key={index}>• {item}</li>)}</ul></div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl bg-emerald-50 p-4">
+              <p className="text-lg font-semibold text-emerald-900 mb-2">Strengths</p>
+              <ul className="mt-1 space-y-1 text-base text-emerald-800">
+                {(data.strengths ?? []).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span>•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-xl bg-amber-50 p-4">
+              <p className="text-lg font-semibold text-amber-900 mb-2">Challenges</p>
+              <ul className="mt-1 space-y-1 text-base text-amber-800">
+                {(data.challenges ?? []).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <span>•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="rounded-xl bg-purple-50 p-4">
+            <p className="text-lg font-semibold text-purple-900 mb-2">Suggestions</p>
+            <ul className="mt-1 space-y-1 text-base text-purple-800">
+              {(data.relationshipTips ?? []).map((item, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span>•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       );
     }
 
     if (actionKey === 'matchExplanation') {
       return (
-        <div className="space-y-4 text-sm text-slate-700">
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-900">Compatibility Level</p>
-            <p className="mt-2">{data.compatibilityLevel || 'N/A'}</p>
+        <div className="space-y-3">
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="text-lg font-semibold text-slate-900 mb-2">Compatibility Level</p>
+            <p className="mt-1 text-base text-slate-700">{data.compatibilityLevel || 'N/A'}</p>
           </div>
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-900">Summary</p>
-            <p className="mt-2">{data.summary || 'N/A'}</p>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="text-lg font-semibold text-slate-900 mb-2">Summary</p>
+            <p className="mt-1 text-base text-slate-700">{data.summary || 'N/A'}</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-900">Strengths</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-lg font-semibold text-slate-900 mb-2">Strengths</p>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-base text-slate-700">
                 {(data.strengths ?? []).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
             </div>
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-900">Challenges</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-lg font-semibold text-slate-900 mb-2">Challenges</p>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-base text-slate-700">
                 {(data.possibleChallenges ?? []).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
             </div>
           </div>
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-900">Tips</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="text-lg font-semibold text-slate-900 mb-2">Suggestions</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-base text-slate-700">
               {(data.tips ?? []).map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
@@ -178,31 +219,31 @@ export default function UserCard({
 
     if (actionKey === 'firstMessage') {
       return (
-        <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-          <p className="text-sm font-semibold text-slate-900">First Message</p>
-          <p className="mt-2 whitespace-pre-wrap">{data.message || 'N/A'}</p>
+        <div className="rounded-xl bg-slate-50 p-4">
+          <p className="text-lg font-semibold text-slate-900 mb-2">First Message</p>
+          <p className="mt-1 whitespace-pre-wrap text-base text-slate-700">{data.message || 'N/A'}</p>
         </div>
       );
     }
 
     if (actionKey === 'datePlanner') {
       return (
-        <div className="space-y-4 text-sm text-slate-700">
+        <div className="space-y-3">
           {(data.dateIdeas ?? []).map((idea, index) => (
-            <div key={index} className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-900">{idea.title || `Idea ${index + 1}`}</p>
+            <div key={index} className="rounded-xl bg-slate-50 p-4">
+              <p className="text-lg font-semibold text-slate-900 mb-2">{idea.title || `Idea ${index + 1}`}</p>
               {idea.locationType && (
-                <p className="mt-2 text-slate-500">Location: {idea.locationType}</p>
+                <p className="mt-1 text-sm text-slate-500">Location: {idea.locationType}</p>
               )}
-              <p className="mt-2">{idea.description || 'No description available.'}</p>
+              <p className="mt-1 text-base text-slate-700">{idea.description || 'No description available.'}</p>
             </div>
           ))}
-          {!(data.dateIdeas?.length) && <p>No date ideas returned.</p>}
+          {!(data.dateIdeas?.length) && <p className="text-base text-slate-700">No date ideas returned.</p>}
         </div>
       );
     }
 
-    return <p className="text-sm text-slate-700">No AI response available.</p>;
+    return <p className="text-base text-slate-700">No AI response available.</p>;
   };
 
   // Inline expanded profile panel — provides a quick view without routing
@@ -334,18 +375,19 @@ export default function UserCard({
 
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6 overflow-hidden"
           role="dialog"
           aria-modal="true"
           onClick={() => setIsModalOpen(false)}
         >
           <div
-            className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200"
+            className="w-full max-w-[1150px] max-h-[85vh] overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200 flex flex-col"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
+            {/* Sticky Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 sticky top-0 bg-white z-10">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">AI Features</h2>
+                <h2 className="text-2xl font-bold text-slate-900">AI Features</h2>
                 <p className="mt-1 text-sm text-slate-500">
                   Generate compatibility insights, match explanations, first messages, and date ideas.
                 </p>
@@ -356,49 +398,53 @@ export default function UserCard({
                 aria-label="Close AI features dialog"
                 className="rounded-full bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </button>
             </div>
 
-            <div className="space-y-6 px-6 py-5 sm:px-8">
-              <div className="grid gap-3 sm:grid-cols-2">
+            {/* Sticky Feature Buttons */}
+            <div className="px-6 py-4 border-b border-slate-200 sticky top-[88px] bg-white z-10">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {aiActions.map((action) => (
                   <button
                     key={action.key}
                     type="button"
                     onClick={() => handleAiAction(action.key, action.endpoint, action.label)}
-                    className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm font-semibold text-slate-900 transition hover:border-indigo-300 hover:bg-indigo-50"
+                    className={`h-[50px] rounded-2xl border text-sm font-semibold text-left px-4 py-2 transition flex items-center justify-center text-center ${
+                      aiResponse?.actionKey === action.key
+                        ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-sm'
+                        : 'border-slate-200 bg-slate-50 text-slate-900 hover:border-indigo-300 hover:bg-indigo-50'
+                    }`}
                   >
                     {action.label}
                   </button>
                 ))}
               </div>
+            </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                {aiLoading ? (
-                  <div className="flex items-center gap-3 text-slate-600">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
-                    Loading AI response…
-                  </div>
-                ) : aiError ? (
-                  <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-200">
-                    {aiError}
-                  </div>
-                ) : aiResponse ? (
-                  <div className="space-y-4">
-                    <div className="rounded-2xl bg-white p-4 shadow-sm">
-                      <p className="text-sm font-semibold text-slate-900">{aiResponse.label}</p>
-                    </div>
-                    {renderAiResult()}
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-500">
-                    Choose an AI feature to see results for this user.
-                  </p>
-                )}
-              </div>
+            {/* Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {aiLoading ? (
+                <div className="flex items-center gap-3 text-slate-600 py-8">
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                  Loading AI response…
+                </div>
+              ) : aiError ? (
+                <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-200">
+                  {aiError}
+                </div>
+              ) : aiResponse ? (
+                <div className="space-y-4">
+                  <div className="text-lg font-semibold text-slate-900 mb-2">{aiResponse.label}</div>
+                  {renderAiResult()}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 py-8">
+                  Choose an AI feature to see results for this user.
+                </p>
+              )}
             </div>
           </div>
         </div>
